@@ -34,7 +34,7 @@ def get_candidates():
                 response = requests.get(f"{BASE_URL}/Vote/{vote_id}")
                 if response.status_code == 200:
                     vote_data = response.json()
-                    # print(vote_data)
+                    print(vote_data)
                     vote_name = vote_data["vote"].get("name", "No Name")
                     total_votes = vote_data["vote"].get("total_votes", 0)
                     candidates.append({"name": vote_name, "votes": total_votes, "vote_id": vote_id})
@@ -60,6 +60,43 @@ def get_candidates():
 #     candidates_list = get_candidates()
 #     print("候選人清單:")
 #     print(candidates_list)
+
+
+
+def get_vote_options(vote_id):
+    """
+    獲取指定投票箱的選項及票數
+    :param vote_id: 投票箱的唯一 ID
+    :return: 返回選項清單，格式如 [{"name": "選項1", "votes": 10, "rank": 1}, ...]
+    """
+    try:
+        # 調用 view_vote API 獲取投票箱詳細資料
+        response = requests.get(f"{BASE_URL}/Vote/{vote_id}")
+        if response.status_code == 200:
+            vote_data = response.json()
+            if "vote" not in vote_data:
+                raise ValueError("無法解析 API 返回的投票數據")
+
+            # 獲取選項及票數
+            options = vote_data["vote"].get("options", {})
+            result = []
+            for option_name, votes in options.items():
+                result.append({"name": option_name, "votes": votes})
+
+            # 根據票數排序並添加排名
+            result = sorted(result, key=lambda x: x["votes"], reverse=True)
+            for rank, option in enumerate(result, start=1):
+                option["rank"] = rank
+
+            return result
+        else:
+            print(f"無法獲取投票數據，狀態碼: {response.status_code}")
+            return []
+    except Exception as e:
+        print(f"發生錯誤: {e}")
+        return []
+
+
 
 def register_user(email: str, password: str):
     """
@@ -150,8 +187,8 @@ def vote(user_token: str, vote_id: str, option: str):
 if __name__ == "__main__":
     # pass
     # 測試登入
-    email = "testuser3@example.com"
-    password = "password123"
+    email = "1111@test.com"
+    password = "11111111"
     login_result = login_user(email,password)
 
     if "idToken" in login_result:
@@ -161,7 +198,7 @@ if __name__ == "__main__":
         # 測試投票
         vote_id = "sample_vote_id"  # 替換為有效的投票 ID
         option = "選項A"  # 替換為有效的選項
-        vote_result = vote(user_token, '-OC76ij8QVgi9l7VNKYS', 'string')
+        vote_result = vote(user_token, '-OC79nfuJ-p0HUM4Tq39', 'ㄚ木的店')
         # vote_result = vote(user_token, '-OC76ij8QVgi9l7VNKYS', 'string')
         # vote_result = vote(user_token, '-OC76ij8QVgi9l7VNKYS', 'string')
         # vote_result = vote(user_token, '-OC76ij8QVgi9l7VNKYS', 'string')
