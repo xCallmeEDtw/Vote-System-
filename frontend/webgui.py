@@ -2,7 +2,7 @@ import streamlit as st
 import doVote
 import time
 from streamlit_autorefresh import st_autorefresh  # 確保已安裝 streamlit_autorefresh
-
+from streamlit_modal import Modal  # 確保已安裝 streamlit-modal 套件
 
 class Page:
     """基礎頁面類，所有頁面繼承此類"""
@@ -84,9 +84,20 @@ class RegisterPage(Page):
 class VotePage(Page):
     """投票頁面"""
 
+    def __init__(self, app):
+        super().__init__(app)
+        self.modal = Modal(title="新增投票箱",key="add_vote_modal")  # 初始化模態框
+
     def show(self):
         st.title("投票箱列表")
         st.write("請選擇一個投票箱進入！")
+
+        # 顯示新增投票箱按鈕
+        with st.container():
+            col1, col2 = st.columns([9, 1])
+            with col2:
+                if st.button("新增投票箱", key="add_vote"):
+                    self.modal.open()  # 打開模態框
 
         # 確認用戶是否已登入
         if self.app.user_id:
@@ -115,6 +126,66 @@ class VotePage(Page):
             self.app.clear_user_id()  # 清除登入 ID
             self.app.set_page("login")
             st.rerun()
+
+        # 顯示新增投票箱模態框
+        self.show_add_vote_modal()
+
+    def show_add_vote_modal(self):
+        """新增投票箱模態框"""
+        if self.modal.is_open():
+            with self.modal.container():
+                st.title("新增投票箱")
+        
+                # 投票名稱輸入框
+                vote_name = st.text_input("投票名稱", key="new_vote_name")
+        
+                # Initialize vote_options if it doesn't exist
+                if "vote_options" not in st.session_state:
+                    st.session_state.vote_options = [""]
+        
+                # 顯示所有選項輸入框
+                st.write("新增選項：")
+                for i, option in enumerate(st.session_state.vote_options):
+                    col1, col2 = st.columns([9, 1])
+                    with col1:
+                        st.session_state.vote_options[i] = st.text_input(f"選項 {i + 1}", value=option, key=f"vote_option_{i}")
+                    with col2:
+                        if len(st.session_state.vote_options) > 1:  # 至少保留一個選項
+                            if st.button("－", key=f"remove_option_{i}"):
+                                st.session_state.vote_options.pop(i)
+                                st.rerun()  # 重新渲染頁面
+        
+                # 按鈕：新增選項輸入框
+                if st.button("新增選項"):
+                    st.session_state.vote_options.append("")
+                    st.rerun()
+        
+                # 提交按鈕
+                if st.button("提交"):
+                    if vote_name and any(opt.strip() for opt in st.session_state.vote_options):
+                        try:
+                            # 將非空選項組成列表並調用 add_vote 函數
+                            option_list = [opt.strip() for opt in st.session_state.vote_options if opt.strip()]
+                            result = doVote.add_vote(self.app.user_id, vote_name, *option_list)
+                            if "error" in result:
+                                st.error(f"新增失敗: {result['error']}")
+                            else:
+                                st.success(f"投票箱 '{vote_name}' 已成功新增！")
+                                self.modal.close()
+                                del st.session_state.vote_options  # Reset modal initialization state
+                                st.rerun()
+                        except Exception as e:
+                            st.error(f"發生錯誤: {e}")
+                    else:
+                        st.error("請輸入投票名稱和至少一個有效選項")
+        
+                # 取消按鈕
+                if st.button("取消"):
+                    self.modal.close()
+                    del st.session_state.vote_options  # Reset modal initialization state
+                    st.rerun()
+
+
 
 
 
