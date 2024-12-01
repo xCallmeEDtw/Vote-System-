@@ -184,28 +184,85 @@ def vote(user_token: str, vote_id: str, option: str):
         return {"error": f"請求失敗: {str(e)}"}
 
 # 測試程式碼
-if __name__ == "__main__":
-    # pass
-    # 測試登入
-    email = "1111@test.com"
-    password = "11111111"
-    login_result = login_user(email,password)
+# if __name__ == "__main__":
+#     # pass
+#     # 測試登入
+#     email = "1111@test.com"
+#     password = "11111111"
+#     login_result = login_user(email,password)
 
-    if "idToken" in login_result:
-        user_token = login_result["idToken"]
-        print("登入成功！")
+#     if "idToken" in login_result:
+#         user_token = login_result["idToken"]
+#         print("登入成功！")
         
-        # 測試投票
-        vote_id = "sample_vote_id"  # 替換為有效的投票 ID
-        option = "選項A"  # 替換為有效的選項
-        vote_result = vote(user_token, '-OC79nfuJ-p0HUM4Tq39', 'ㄚ木的店')
-        # vote_result = vote(user_token, '-OC76ij8QVgi9l7VNKYS', 'string')
-        # vote_result = vote(user_token, '-OC76ij8QVgi9l7VNKYS', 'string')
-        # vote_result = vote(user_token, '-OC76ij8QVgi9l7VNKYS', 'string')
-        # vote_result = vote(user_token, '-OC76ij8QVgi9l7VNKYS', 'string')
-        # vote_result = vote(user_token, '-OC76ij8QVgi9l7VNKYS', 'string')
-        # vote_result = vote(user_token, '-OC76ij8QVgi9l7VNKYS', 'string')
-        # vote_result = vote(user_token, '-OC76ij8QVgi9l7VNKYS', 'string')
-        print("投票結果:", vote_result)
+#         # 測試投票
+#         vote_id = "sample_vote_id"  # 替換為有效的投票 ID
+#         option = "選項A"  # 替換為有效的選項
+#         vote_result = vote(user_token, '-OC79nfuJ-p0HUM4Tq39', 'ㄚ木的店')
+#         # vote_result = vote(user_token, '-OC76ij8QVgi9l7VNKYS', 'string')
+#         # vote_result = vote(user_token, '-OC76ij8QVgi9l7VNKYS', 'string')
+#         # vote_result = vote(user_token, '-OC76ij8QVgi9l7VNKYS', 'string')
+#         # vote_result = vote(user_token, '-OC76ij8QVgi9l7VNKYS', 'string')
+#         # vote_result = vote(user_token, '-OC76ij8QVgi9l7VNKYS', 'string')
+#         # vote_result = vote(user_token, '-OC76ij8QVgi9l7VNKYS', 'string')
+#         # vote_result = vote(user_token, '-OC76ij8QVgi9l7VNKYS', 'string')
+#         print("投票結果:", vote_result)
+#     else:
+#         print("登入失敗:", login_result.get("error", "未知錯誤"))
+
+def add_vote(user_token, name, *options):
+    """
+    創建投票並新增選項
+    :param user_token: 用戶的 ID Token
+    :param name: 投票名稱
+    :param options: 傳入的選項，作為可變參數
+    :return: 返回創建的投票 ID 和選項結果
+    """
+    try:
+        # 呼叫 createVote API，將參數傳遞到 query
+        create_vote_response = requests.post(
+            f"{BASE_URL}/createVote",
+            params={"usertoken": user_token, "name": name},  # 將 token 和名稱放入查詢參數
+            json=list(options)  # 選項作為列表傳入
+        )
+
+        if create_vote_response.status_code != 200:
+            raise Exception(f"創建投票失敗: {create_vote_response.json().get('detail', '未知錯誤')}")
+
+        # 解析投票 ID
+        vote_id = create_vote_response.json()["vote_id"]
+        print(f"投票已成功創建，ID: {vote_id}")
+
+        # 返回結果
+        return {"message": "投票和選項已成功創建", "vote_id": vote_id}
+
+    except Exception as e:
+        print(f"發生錯誤: {e}")
+        return {"error": str(e)}
+
+if __name__ == "__main__":
+    """
+    測試 add_vote 函數
+    """
+    # 測試用戶登入
+    email = "testuser3@example.com"
+    password = "password123"
+
+
+    user_token = login_user(email, password)['idToken']
+    # print(user_token['idToken'])
+    # # 測試數據
+    vote_name = "今晚吃什麼3"
+    options = ["火鍋", "燒烤", "拉麵", "壽司"]
+
+    # 調用 add_vote 函數
+    result = add_vote(user_token, vote_name, *options)
+
+    # 打印結果
+    print("測試結果:")
+    if "error" in result:
+        print(f"測試失敗，錯誤信息: {result['error']}")
     else:
-        print("登入失敗:", login_result.get("error", "未知錯誤"))
+        print(f"測試成功，投票 ID: {result['vote_id']}")
+        print(f"投票名稱: {vote_name}")
+        print(f"選項: {options}")
