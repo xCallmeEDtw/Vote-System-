@@ -56,7 +56,6 @@ def view_vote(voteID: str):
         return {"message": "Vote retrieved successfully", "vote_id": voteID, "vote": vote_data}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to retrieve vote: {str(e)}")
-<<<<<<< Updated upstream:backend/main.py
 
 @app.get("/vote")
 def all_vote():
@@ -72,15 +71,10 @@ def all_vote():
         raise HTTPException(status_code=500, detail=f"Failed to retrieve vote: {str(e)}")
 
 
-
-@app.post("/addVoteOption")
-def add_vote_option(vote_id: str, option: str):
-=======
 #-OCHXe0bM1M5NLCD0nCv
 #eyJhbGciOiJSUzI1NiIsImtpZCI6IjkyODg2OGRjNDRlYTZhOThjODhiMzkzZDM2NDQ1MTM2NWViYjMwZDgiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL3NlY3VyZXRva2VuLmdvb2dsZS5jb20vb29wLTVmYjczIiwiYXVkIjoib29wLTVmYjczIiwiYXV0aF90aW1lIjoxNzMyMjU2NjIwLCJ1c2VyX2lkIjoiY3RLM1NCcmREUFVNUFdZWk5OSVdFSVk3WDVHMyIsInN1YiI6ImN0SzNTQnJkRFBVTVBXWVpOTklXRUlZN1g1RzMiLCJpYXQiOjE3MzIyNTY2MjAsImV4cCI6MTczMjI2MDIyMCwiZW1haWwiOiIxMjNhc2RAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOmZhbHNlLCJmaXJlYmFzZSI6eyJpZGVudGl0aWVzIjp7ImVtYWlsIjpbIjEyM2FzZEBnbWFpbC5jb20iXX0sInNpZ25faW5fcHJvdmlkZXIiOiJwYXNzd29yZCJ9fQ.EIam2-3rO4oLWTj94kigWD_cFEjjKUvaA4oaSb_a4KBaYDSMflYEdGqyDlXap9OW5JcKUh_pgIDCVCD4cCZFa5eCWgiQt0y4sasO3xPg7MaCqr8BA3yEmjKZQMfk1dBYkS8Odg6gKwpOSS4M-CstgCODHlgwvaJcCSlVkrCtVNlPhOhrnvKDtX3yrHut0xsXjfPvoO5u9mN3W3hd7_uZXxZ9pnRbNkObtZMC8JgdpT5DsEMGSyLE8CkC4QFJy0sZub-cI2xt_HrDEygXvjmN5y5cvNtJa-6sjT5SlD67SMDBPv-42CzdEAwd31akbA3Edb6PATAh4gWjzPSzD_uM4A
 @app.post("/addVoteOption")
 def add_vote_option(user_token: str, vote_id: str, option: str):
->>>>>>> Stashed changes:main.py
     try:
         # 從 Firebase 取得投票資料參考
         vote_ref = db.child("votes").child(vote_id)
@@ -114,8 +108,7 @@ def add_vote_option(user_token: str, vote_id: str, option: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
 
-<<<<<<< Updated upstream:backend/main.py
-=======
+
 @app.post("/vote")
 def vote(user_token: str, vote_id: str, option: str):
     try:
@@ -165,9 +158,6 @@ def vote(user_token: str, vote_id: str, option: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
 
-
-
->>>>>>> Stashed changes:main.py
 @app.post("/addUser")
 def add_user(email: str, password: str):
     try:
