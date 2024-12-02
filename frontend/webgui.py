@@ -91,8 +91,8 @@ class VotePage(Page):
 
     def __init__(self, app):
         super().__init__(app)
-        self.modal = Modal(title="Create new topic",key="add_vote_modal")  # 初始化模態框
-                    
+        # 移除 Modal 初始化
+
     def show(self):
         # 確認用戶是否已登入
         if self.app.user_id:
@@ -110,8 +110,11 @@ class VotePage(Page):
 
         # 顯示新增投票箱按鈕
         if st.button("Create new topic", key="add_vote"):
-            self.modal.open()  # 打開模態框
+            st.session_state.show_add_vote_form = True  # 顯示表單
 
+        # 顯示新增投票箱表單
+        if st.session_state.get('show_add_vote_form', False):
+            self.show_add_vote_form()
 
         st.markdown("---")
         st.subheader("Voting Topics")
@@ -122,15 +125,13 @@ class VotePage(Page):
 
         selected_candidate = st.selectbox("", [candidate['name'] for candidate in candidates])
 
-
         for candidate in candidates:
             if selected_candidate == candidate['name']:
-                if st.button(f"vote", key=f"enter_{candidate['vote_id']}"):
+                if st.button(f"Vote", key=f"enter_{candidate['vote_id']}"):
                     self.app.current_vote_box = candidate['vote_id']  # 設置當前投票箱 ID
                     self.app.current_vote_name = candidate['name']  # 設置當前投票箱名字
                     self.app.set_page("vote_box")  # 跳轉到投票箱詳細頁
                     st.rerun()
-
 
         # 登出按鈕
         st.markdown("---")
@@ -139,63 +140,73 @@ class VotePage(Page):
             self.app.set_page("login")
             st.rerun()
 
-        # 顯示新增投票箱模態框
-        self.show_add_vote_modal()
+    def show_add_vote_form(self):
+        """新增投票箱表單"""
+        st.markdown("---")
+        st.subheader("新增投票箱")
+        
+        # 初始化投票名稱
+        if 'new_vote_name' not in st.session_state:
+            st.session_state.new_vote_name = ''
 
-    def show_add_vote_modal(self):
-        """新增投票箱模態框"""
-        if self.modal.is_open():
-            with self.modal.container():
-                st.title("新增投票箱")
-        
-                # 投票名稱輸入框
-                vote_name = st.text_input("投票名稱", key="new_vote_name")
-        
-                # Initialize vote_options if it doesn't exist
-                if "vote_options" not in st.session_state:
-                    st.session_state.vote_options = [""]
-        
-                # 顯示所有選項輸入框
-                st.write("新增選項：")
-                for i, option in enumerate(st.session_state.vote_options):
-                    col1, col2 = st.columns([9, 1])
-                    with col1:
-                        st.session_state.vote_options[i] = st.text_input(f"選項 {i + 1}", value=option, key=f"vote_option_{i}")
-                    with col2:
-                        if len(st.session_state.vote_options) > 1:  # 至少保留一個選項
-                            if st.button("－", key=f"remove_option_{i}"):
-                                st.session_state.vote_options.pop(i)
-                                st.rerun()  # 重新渲染頁面
-        
-                # 按鈕：新增選項輸入框
-                if st.button("新增選項"):
-                    st.session_state.vote_options.append("")
-                    st.rerun()
-        
-                # 提交按鈕
-                if st.button("提交"):
-                    if vote_name and any(opt.strip() for opt in st.session_state.vote_options):
-                        try:
-                            # 將非空選項組成列表並調用 add_vote 函數
-                            option_list = [opt.strip() for opt in st.session_state.vote_options if opt.strip()]
-                            result = doVote.add_vote(self.app.user_id, vote_name, *option_list)
-                            if "error" in result:
-                                st.error(f"新增失敗: {result['error']}")
-                            else:
-                                st.success(f"投票箱 '{vote_name}' 已成功新增！")
-                                self.modal.close()
-                                del st.session_state.vote_options  # Reset modal initialization state
-                                st.rerun()
-                        except Exception as e:
-                            st.error(f"發生錯誤: {e}")
+        # 投票名稱輸入框
+        vote_name = st.text_input("投票名稱", key="new_vote_name")
+
+        # 初始化選項列表
+        if "vote_options" not in st.session_state:
+            st.session_state.vote_options = [""]
+
+        # 顯示所有選項輸入框
+        st.write("新增選項：")
+        options_to_remove = []
+        for i, option in enumerate(st.session_state.vote_options):
+            cols = st.columns([9, 1])
+            with cols[0]:
+                st.session_state.vote_options[i] = st.text_input(f"選項 {i + 1}", value=option, key=f"vote_option_{i}")
+            with cols[1]:
+                if len(st.session_state.vote_options) > 1:
+                    if st.button("－", key=f"remove_option_{i}"):
+                        options_to_remove.append(i)
+        # 移除選定的選項
+        if options_to_remove:
+            for idx in sorted(options_to_remove, reverse=True):
+                st.session_state.vote_options.pop(idx)
+            st.rerun()
+
+        # 按鈕：新增選項輸入框
+        if st.button("新增選項"):
+            st.session_state.vote_options.append("")
+            st.rerun()
+
+        # 提交按鈕
+        if st.button("提交"):
+            if vote_name and any(opt.strip() for opt in st.session_state.vote_options):
+                try:
+                    # 將非空選項組成列表並調用 add_vote 函數
+                    option_list = [opt.strip() for opt in st.session_state.vote_options if opt.strip()]
+                    result = doVote.add_vote(self.app.user_id, vote_name, *option_list)
+                    if "error" in result:
+                        st.error(f"新增失敗: {result['error']}")
                     else:
-                        st.error("請輸入投票名稱和至少一個有效選項")
-        
-                # 取消按鈕
-                if st.button("取消"):
-                    self.modal.close()
-                    del st.session_state.vote_options  # Reset modal initialization state
-                    st.rerun()
+                        st.success(f"投票箱 '{vote_name}' 已成功新增！")
+                        # 重置表單
+                        del st.session_state.vote_options  # 重置選項
+                        del st.session_state.new_vote_name  # 重置投票名稱
+                        st.session_state.show_add_vote_form = False
+                        st.rerun()
+                except Exception as e:
+                    st.error(f"發生錯誤: {e}")
+            else:
+                st.error("請輸入投票名稱和至少一個有效選項")
+
+        # 取消按鈕
+        if st.button("取消"):
+            st.session_state.show_add_vote_form = False
+            del st.session_state.vote_options  # 重置選項
+            del st.session_state.new_vote_name  # 重置投票名稱
+            st.rerun()
+
+
 
 
 class VoteBoxPage(Page):
