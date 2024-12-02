@@ -1,8 +1,10 @@
+# streamlit run .\webgui.py
 import streamlit as st
 import doVote
 import time
 from streamlit_autorefresh import st_autorefresh  # 確保已安裝 streamlit_autorefresh
 from streamlit_modal import Modal  # 確保已安裝 streamlit-modal 套件
+from streamlit_elements import elements
 
 class Page:
     """基礎頁面類，所有頁面繼承此類"""
@@ -12,7 +14,7 @@ class Page:
 
     def show(self):
         """顯示頁面的方法，需由子類實現"""
-        raise NotImplementedError("子類必須實現 show 方法")
+        raise NotImplementedError("Need to implement show method.")
 
 
 class LoginPage(Page):
@@ -20,65 +22,68 @@ class LoginPage(Page):
 
     def show(self):
         # 切換按鈕放在頂部
-        if st.button("切換到註冊", key="switch_to_register"):
+        if st.button("register an account", key="switch_to_register"):
             self.app.set_page("register")
             st.rerun()
 
-        st.title("登入頁面")
+        
+        st.title("Enter your identity")
+        st.subheader("Not registered yet?")
+        st.text("Click the 'Register an account' button above to register.")
 
         # 輸入框
-        username = st.text_input("帳號", key="username_login")
-        password = st.text_input("密碼", type="password", key="password_login")
+        username = st.text_input("Account", key="username_login")
+        password = st.text_input("Password", type="password", key="password_login")
 
         # 登入按鈕
-        if st.button("登入"):
+        if st.button("sign in"):
             if username and password:  # 驗證是否輸入帳號和密碼
                 # 調用 doVote.login_user API
                 login_result = doVote.login_user(username, password)
                 if login_result and isinstance(login_result, dict):
                     if "idToken" in login_result:
-                        st.success("登入成功！")
+                        st.success("Welcome, voter!")
                         self.app.set_user_id(login_result["idToken"])  # 保存 idToken 到主應用
                         self.app.set_page("vote")  # 切換到投票頁面
                         st.rerun()  # 確保頁面刷新
                     else:
-                        st.error(f"登入失敗: {login_result.get('error', '未知錯誤')}")
+                        st.error(f"Sign in failed: {login_result.get('error', 'Unknown error')}")
                 else:
-                    st.error("登入失敗: 無法解析伺服器回應")
+                    st.error("Sign in failed: Unable to parse the server response")
             else:
-                st.error("請輸入帳號和密碼")
-
+                st.error("Enter your account and password.")
 
 class RegisterPage(Page):
     """註冊頁面"""
 
     def show(self):
         # 切換按鈕放在頂部
-        if st.button("切換到登入", key="switch_to_login"):
+        if st.button("Back to sign in page", key="switch_to_login"):
             self.app.set_page("login")
             st.rerun()
 
-        st.title("註冊頁面")
+        st.title("Create a new identity")
+        st.subheader("Enter your email in the account field.")
 
         # 輸入框
-        username = st.text_input("帳號", key="username_register")
-        password = st.text_input("密碼", type="password", key="password_register")
-        confirm_password = st.text_input("確認密碼", type="password", key="confirm_password_register")
+        username = st.text_input("Account", key="username_register")
+        password = st.text_input("Password", type="password", key="password_register")
+        confirm_password = st.text_input("Confirm your password", type="password", key="confirm_password_register")
 
         # 註冊按鈕
-        if st.button("註冊"):
+        if st.button("create"):
             if username and password and confirm_password:  # 簡單檢查
                 if password == confirm_password:
                     # 調用 doVote.register_user API
                     register_result = doVote.register_user(username, password)
                     if "success" in register_result:
-                        st.success("註冊成功！請切換到登入頁面")
+                        st.success("Welcome, user! Please switch to the login page.")
                     else:
-                        st.error(f"註冊失敗: {register_result.get('error', '未知錯誤')}")
+                        st.error(f"Registration failed: {register_result.get('error', 'Unknown error')}")
                 else:
-                    st.error("密碼與確認密碼不一致")
+                    st.error("Password and confirm password do not match.")
             else:
-                st.error("請輸入帳號、密碼和確認密碼")
+                st.error("Enter your email, password, and confirm your password.")
 
 
 class VotePage(Page):
@@ -86,105 +91,120 @@ class VotePage(Page):
 
     def __init__(self, app):
         super().__init__(app)
-        self.modal = Modal(title="新增投票箱",key="add_vote_modal")  # 初始化模態框
+        # 移除 Modal 初始化
 
     def show(self):
-        st.title("投票箱列表")
-        st.write("請選擇一個投票箱進入！")
-
-        # 顯示新增投票箱按鈕
-        with st.container():
-            col1, col2 = st.columns([9, 1])
-            with col2:
-                if st.button("新增投票箱", key="add_vote"):
-                    self.modal.open()  # 打開模態框
-
         # 確認用戶是否已登入
         if self.app.user_id:
             pass
         else:
-            st.error("未登入，請返回登入頁面")
+            st.error("Not logged in, please return to the login page.")
             self.app.set_page("login")
             st.rerun()
 
         # 獲取投票箱列表
         candidates = doVote.get_candidates()
 
-        # 顯示投票箱
+        st.title("Choose a topic to participate in.")
+        st.subheader("...or create your own topic.")
+
+        # 顯示新增投票箱按鈕
+        if st.button("Create new topic", key="add_vote"):
+            st.session_state.show_add_vote_form = True  # 顯示表單
+
+        # 顯示新增投票箱表單
+        if st.session_state.get('show_add_vote_form', False):
+            self.show_add_vote_form()
+
+        st.markdown("---")
+        st.subheader("Voting Topics")
+
+        # 顯示投票箱 
         for candidate in candidates:
-            col1, col2 = st.columns([3, 1])
-            with col1:
-                st.write(f"投票箱名稱: {candidate['name']} - 總票數: {candidate['votes']}")
-            with col2:
-                if st.button("進入", key=f"enter_{candidate['vote_id']}"):
+            st.markdown(f"- **{candidate['name']}** ({candidate['votes']} votes)")
+
+        selected_candidate = st.selectbox("", [candidate['name'] for candidate in candidates])
+
+        for candidate in candidates:
+            if selected_candidate == candidate['name']:
+                if st.button(f"Vote", key=f"enter_{candidate['vote_id']}"):
                     self.app.current_vote_box = candidate['vote_id']  # 設置當前投票箱 ID
+                    self.app.current_vote_name = candidate['name']  # 設置當前投票箱名字
                     self.app.set_page("vote_box")  # 跳轉到投票箱詳細頁
                     st.rerun()
 
         # 登出按鈕
-        if st.button("登出", key="logout"):
+        st.markdown("---")
+        if st.button("Log out", key="logout"):
             self.app.clear_user_id()  # 清除登入 ID
             self.app.set_page("login")
             st.rerun()
 
-        # 顯示新增投票箱模態框
-        self.show_add_vote_modal()
+    def show_add_vote_form(self):
+        """新增投票箱表單"""
+        st.markdown("---")
+        st.subheader("新增投票箱")
+        
+        # 初始化投票名稱
+        if 'new_vote_name' not in st.session_state:
+            st.session_state.new_vote_name = ''
 
-    def show_add_vote_modal(self):
-        """新增投票箱模態框"""
-        if self.modal.is_open():
-            with self.modal.container():
-                st.title("新增投票箱")
-        
-                # 投票名稱輸入框
-                vote_name = st.text_input("投票名稱", key="new_vote_name")
-        
-                # Initialize vote_options if it doesn't exist
-                if "vote_options" not in st.session_state:
-                    st.session_state.vote_options = [""]
-        
-                # 顯示所有選項輸入框
-                st.write("新增選項：")
-                for i, option in enumerate(st.session_state.vote_options):
-                    col1, col2 = st.columns([9, 1])
-                    with col1:
-                        st.session_state.vote_options[i] = st.text_input(f"選項 {i + 1}", value=option, key=f"vote_option_{i}")
-                    with col2:
-                        if len(st.session_state.vote_options) > 1:  # 至少保留一個選項
-                            if st.button("－", key=f"remove_option_{i}"):
-                                st.session_state.vote_options.pop(i)
-                                st.rerun()  # 重新渲染頁面
-        
-                # 按鈕：新增選項輸入框
-                if st.button("新增選項"):
-                    st.session_state.vote_options.append("")
-                    st.rerun()
-        
-                # 提交按鈕
-                if st.button("提交"):
-                    if vote_name and any(opt.strip() for opt in st.session_state.vote_options):
-                        try:
-                            # 將非空選項組成列表並調用 add_vote 函數
-                            option_list = [opt.strip() for opt in st.session_state.vote_options if opt.strip()]
-                            result = doVote.add_vote(self.app.user_id, vote_name, *option_list)
-                            if "error" in result:
-                                st.error(f"新增失敗: {result['error']}")
-                            else:
-                                st.success(f"投票箱 '{vote_name}' 已成功新增！")
-                                self.modal.close()
-                                del st.session_state.vote_options  # Reset modal initialization state
-                                st.rerun()
-                        except Exception as e:
-                            st.error(f"發生錯誤: {e}")
+        # 投票名稱輸入框
+        vote_name = st.text_input("投票名稱", key="new_vote_name")
+
+        # 初始化選項列表
+        if "vote_options" not in st.session_state:
+            st.session_state.vote_options = [""]
+
+        # 顯示所有選項輸入框
+        st.write("新增選項：")
+        options_to_remove = []
+        for i, option in enumerate(st.session_state.vote_options):
+            cols = st.columns([9, 1])
+            with cols[0]:
+                st.session_state.vote_options[i] = st.text_input(f"選項 {i + 1}", value=option, key=f"vote_option_{i}")
+            with cols[1]:
+                if len(st.session_state.vote_options) > 1:
+                    if st.button("－", key=f"remove_option_{i}"):
+                        options_to_remove.append(i)
+        # 移除選定的選項
+        if options_to_remove:
+            for idx in sorted(options_to_remove, reverse=True):
+                st.session_state.vote_options.pop(idx)
+            st.rerun()
+
+        # 按鈕：新增選項輸入框
+        if st.button("新增選項"):
+            st.session_state.vote_options.append("")
+            st.rerun()
+
+        # 提交按鈕
+        if st.button("提交"):
+            if vote_name and any(opt.strip() for opt in st.session_state.vote_options):
+                try:
+                    # 將非空選項組成列表並調用 add_vote 函數
+                    option_list = [opt.strip() for opt in st.session_state.vote_options if opt.strip()]
+                    result = doVote.add_vote(self.app.user_id, vote_name, *option_list)
+                    if "error" in result:
+                        st.error(f"新增失敗: {result['error']}")
                     else:
-                        st.error("請輸入投票名稱和至少一個有效選項")
-        
-                # 取消按鈕
-                if st.button("取消"):
-                    self.modal.close()
-                    del st.session_state.vote_options  # Reset modal initialization state
-                    st.rerun()
+                        st.success(f"投票箱 '{vote_name}' 已成功新增！")
+                        # 重置表單
+                        del st.session_state.vote_options  # 重置選項
+                        del st.session_state.new_vote_name  # 重置投票名稱
+                        st.session_state.show_add_vote_form = False
+                        st.rerun()
+                except Exception as e:
+                    st.error(f"發生錯誤: {e}")
+            else:
+                st.error("請輸入投票名稱和至少一個有效選項")
 
+        # 取消按鈕
+        if st.button("取消"):
+            st.session_state.show_add_vote_form = False
+            del st.session_state.vote_options  # 重置選項
+            del st.session_state.new_vote_name  # 重置投票名稱
+            st.rerun()
 
 
 
@@ -193,20 +213,19 @@ class VoteBoxPage(Page):
     """投票箱詳細頁面"""
 
     def show(self):
-        st.title("投票選項")
-        st.write("請為您支持的選項投票！")
+        st.title(f"{self.app.current_vote_name}")
 
         # 確認用戶是否已登入
         if self.app.user_id:
             pass
         else:
-            st.error("未登入，請返回登入頁面")
+            st.error("Not logged in. Please return to the login page.")
             self.app.set_page("login")
             st.rerun()
 
         # 確認當前是否有選擇的投票箱
         if not self.app.current_vote_box:
-            st.error("未選擇投票箱，請返回選擇投票箱")
+            st.error("No voting topic, please return to voting topic selection page.")
             self.app.set_page("vote")
             st.rerun()
 
@@ -218,26 +237,41 @@ class VoteBoxPage(Page):
         try:
             options = doVote.get_vote_options(self.app.current_vote_box)
         except Exception as e:
-            st.error(f"無法獲取投票選項: {e}")
+            st.error(f"Cannot get vote option: {e}")
             return
 
+
+        # Placeholder for success message
+        success_message = st.empty()
+        
         # 顯示選項
         for option in options:
-            col1, col2 = st.columns([3, 1])
+            col1, col2 = st.columns([1, 1])
             with col1:
-                st.write(f"選項: {option['name']} - 得票數: {option['votes']}")
-            with col2:
-                if st.button("投票", key=f"vote_{option['name']}"):
+                if st.button(f"{option['name']}", key=f"vote_{option['name']}"):
                     try:
                         # 調用 doVote.vote API 進行投票
                         doVote.vote(self.app.user_id, self.app.current_vote_box, option['name'])
-                        st.success(f"已成功為 {option['name']} 投票！")
+                        
+                        # Display success message
+                        success_message.success(f"Successfully vote for {option['name']}！")
+                        
+                        # Wait for a few seconds to show the success message
+                        time.sleep(2)
+                        
+                        # Clear the success message after the delay
+                        success_message.empty()
+
                         st.rerun()  # 手動刷新頁面
                     except Exception as e:
-                        st.error(f"投票失敗: {e}")
+                        st.error(f"Voting failed: {e}")
+            with col2:
+                st.write(f"{option['votes']} votes")
+
+        st.markdown("---")
 
         # 返回投票箱列表
-        if st.button("返回投票箱列表"):
+        if st.button("Back to Voting Topics"):
             self.app.set_page("vote")
             st.rerun()
 
@@ -254,6 +288,8 @@ class StreamlitApp:
             st.session_state.user_id = None
         if "current_vote_box" not in st.session_state:
             st.session_state.current_vote_box = None
+        if "current_vote_name" not in st.session_state:
+            st.session_state.current_vote_name = None
         self.pages = {
             "login": LoginPage(self),
             "register": RegisterPage(self),
@@ -285,6 +321,14 @@ class StreamlitApp:
     def current_vote_box(self, vote_box_id):
         st.session_state.current_vote_box = vote_box_id
 
+    @property
+    def current_vote_name(self):
+        return st.session_state.current_vote_name
+
+    @current_vote_name.setter
+    def current_vote_name(self, vote_name):
+        st.session_state.current_vote_name = vote_name
+
     def set_page(self, page_name):
         self.current_page = page_name
 
@@ -305,7 +349,7 @@ class StreamlitApp:
         if page in self.pages:
             self.pages[page].show()
         else:
-            st.error("未知頁面，請重新登入！")
+            st.error("Unknown page, navigating back to sign in page.")
             self.set_page("login")
             st.rerun()
 
