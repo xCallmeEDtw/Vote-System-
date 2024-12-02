@@ -1,3 +1,4 @@
 streamlit
 streamlit-autorefresh
 streamlit-modal
+streamlit_elements
