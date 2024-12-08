@@ -301,28 +301,28 @@ def add_vote_option(user_token, vote_id, option):
 
 # 執行測試
 if __name__ == "__main__":
-    def test_add_vote_option():
-        """
-        測試 add_vote_option 函數
-        """
-        # 測試用戶登入
-        email = "testuser3@example.com"
-        password = "password123"
+   
+    # """
+    # 測試 add_vote_option 函數
+    # """
+    # # 測試用戶登入
+    email = "testuser3@example.com"
+    password = "password123"
 
-        user_token = login_user(email, password)
+    user_token = login_user(email, password)
 
-        # 測試數據
-        vote_id = "-OD1OQYGa1heuRySeW6K"  # 替換為真實的投票箱 ID
-        option = "新的選項"
+    # 測試數據
+    vote_id = "-ODb18qZ1GiDFR5MLml-"  # 替換為真實的投票箱 ID
+    option = "新的選項"
 
-        # 調用 add_vote_option 函數
-        result = add_vote_option(user_token, vote_id, option)
+    # 調用 add_vote_option 函數
+    result = add_vote_option(user_token, vote_id, option)
 
-        # 打印結果
-        print("測試結果:")
-        if "error" in result:
-            print(f"測試失敗，錯誤信息: {result['error']}")
-        else:
-            print(f"測試成功，新增選項: {option}")
-            print(f"返回數據: {result}")    
-    test_add_vote_option()
+    # 打印結果
+    print("測試結果:")
+    if "error" in result:
+        print(f"測試失敗，錯誤信息: {result['error']}")
+    else:
+        print(f"測試成功，新增選項: {option}")
+        print(f"返回數據: {result}")    
+    # test_add_vote_option()
