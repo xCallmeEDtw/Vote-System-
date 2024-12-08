@@ -243,6 +243,7 @@ class VoteBoxPage(Page):
 
         # Placeholder for success message
         success_message = st.empty()
+        error_message = st.empty()
         
         # 顯示選項
         for option in options:
@@ -251,16 +252,22 @@ class VoteBoxPage(Page):
                 if st.button(f"{option['name']}", key=f"vote_{option['name']}"):
                     try:
                         # 調用 doVote.vote API 進行投票
-                        doVote.vote(self.app.user_id, self.app.current_vote_box, option['name'])
-                        
-                        # Display success message
-                        success_message.success(f"Successfully vote for {option['name']}！")
-                        
-                        # Wait for a few seconds to show the success message
-                        time.sleep(2)
-                        
-                        # Clear the success message after the delay
-                        success_message.empty()
+                        vote_result = doVote.vote(self.app.user_id, self.app.current_vote_box, option['name'])
+                        if 'error' in vote_result:
+                            error_message.error(f"You have already voted.")
+                            time.sleep(5)
+                            success_message.empty()
+                        else: 
+                            # Display success message
+                            success_message.success(f"Successfully vote for {option['name']}！")
+                            
+                            # Wait for a few seconds to show the success message
+                            time.sleep(3)
+                            
+                            # Clear the success message after the delay
+                            success_message.empty()
+
+
 
                         st.rerun()  # 手動刷新頁面
                     except Exception as e:

@@ -34,8 +34,8 @@ def get_candidates():
                 response = requests.get(f"{BASE_URL}/Vote/{vote_id}")
                 if response.status_code == 200:
                     vote_data = response.json()
-                    print(vote_data)
-                    vote_name = vote_data["vote"].get("name", "No Name")
+                    # print(vote_data)
+                    vote_name = vote_data["vote"].get("name", "No Name").rsplit("_", 1)[0]
                     total_votes = vote_data["vote"].get("total_votes", 0)
                     candidates.append({"name": vote_name, "votes": total_votes, "vote_id": vote_id})
                 else:
@@ -245,24 +245,25 @@ if __name__ == "__main__":
     測試 add_vote 函數
     """
     # 測試用戶登入
-    email = "testuser3@example.com"
-    password = "password123"
+    # email = "testuser3@example.com"
+    # password = "password123"
 
 
-    user_token = login_user(email, password)['idToken']
-    # print(user_token['idToken'])
-    # # 測試數據
-    vote_name = "今晚吃什麼3"
-    options = ["火鍋", "燒烤", "拉麵", "壽司"]
+    # user_token = login_user(email, password)['idToken']
+    # # print(user_token['idToken'])
+    # # # 測試數據
+    # vote_name = "今晚吃什麼3"
+    # options = ["火鍋", "燒烤", "拉麵", "壽司"]
 
-    # 調用 add_vote 函數
-    result = add_vote(user_token, vote_name, *options)
+    # # 調用 add_vote 函數
+    # result = add_vote(user_token, vote_name, *options)
 
-    # 打印結果
-    print("測試結果:")
-    if "error" in result:
-        print(f"測試失敗，錯誤信息: {result['error']}")
-    else:
-        print(f"測試成功，投票 ID: {result['vote_id']}")
-        print(f"投票名稱: {vote_name}")
-        print(f"選項: {options}")
+    # # 打印結果
+    # print("測試結果:")
+    # if "error" in result:
+    #     print(f"測試失敗，錯誤信息: {result['error']}")
+    # else:
+    #     print(f"測試成功，投票 ID: {result['vote_id']}")
+    #     print(f"投票名稱: {vote_name}")
+    #     print(f"選項: {options}")
+    print(get_candidates()[0])
