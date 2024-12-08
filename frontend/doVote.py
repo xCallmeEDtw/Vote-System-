@@ -34,8 +34,8 @@ def get_candidates():
                 response = requests.get(f"{BASE_URL}/Vote/{vote_id}")
                 if response.status_code == 200:
                     vote_data = response.json()
-                    print(vote_data)
-                    vote_name = vote_data["vote"].get("name", "No Name")
+                    # print(vote_data)
+                    vote_name = vote_data["vote"].get("name", "No Name").rsplit("_", 1)[0]
                     total_votes = vote_data["vote"].get("total_votes", 0)
                     candidates.append({"name": vote_name, "votes": total_votes, "vote_id": vote_id})
                 else:
@@ -240,29 +240,89 @@ def add_vote(user_token, name, *options):
         print(f"發生錯誤: {e}")
         return {"error": str(e)}
 
+# if __name__ == "__main__":
+#     """
+#     測試 add_vote 函數
+#     """
+#     # 測試用戶登入
+#     # email = "testuser3@example.com"
+#     # password = "password123"
+
+
+#     # user_token = login_user(email, password)['idToken']
+#     # # print(user_token['idToken'])
+#     # # # 測試數據
+#     # vote_name = "今晚吃什麼3"
+#     # options = ["火鍋", "燒烤", "拉麵", "壽司"]
+
+#     # # 調用 add_vote 函數
+#     # result = add_vote(user_token, vote_name, *options)
+
+#     # # 打印結果
+#     # print("測試結果:")
+#     # if "error" in result:
+#     #     print(f"測試失敗，錯誤信息: {result['error']}")
+#     # else:
+#     #     print(f"測試成功，投票 ID: {result['vote_id']}")
+#     #     print(f"投票名稱: {vote_name}")
+#     #     print(f"選項: {options}")
+#     print(get_candidates()[0])
+
+
+
+def add_vote_option(user_token, vote_id, option):
+    """
+    添加新的投票選項
+    :param user_token: 用戶的 ID Token
+    :param vote_id: 投票箱的 ID
+    :param option: 新增的選項名稱
+    :return: API 返回結果
+    """
+    try:
+        # 調用 /addVoteOption API
+        response = requests.post(
+            f"{BASE_URL}/addVoteOption",
+            params={"user_token": user_token, "vote_id": vote_id, "option": option}
+        )
+
+        if response.status_code != 200:
+            raise Exception(f"新增選項失敗: {response.json().get('detail', '未知錯誤')}")
+
+        # 返回成功結果
+        return response.json()
+
+    except Exception as e:
+        print(f"發生錯誤: {e}")
+        return {"error": str(e)}
+
+
+
+
+
+# 執行測試
 if __name__ == "__main__":
-    """
-    測試 add_vote 函數
-    """
-    # 測試用戶登入
+   
+    # """
+    # 測試 add_vote_option 函數
+    # """
+    # # 測試用戶登入
     email = "testuser3@example.com"
     password = "password123"
 
+    user_token = login_user(email, password)
 
-    user_token = login_user(email, password)['idToken']
-    # print(user_token['idToken'])
-    # # 測試數據
-    vote_name = "今晚吃什麼3"
-    options = ["火鍋", "燒烤", "拉麵", "壽司"]
+    # 測試數據
+    vote_id = "-ODb18qZ1GiDFR5MLml-"  # 替換為真實的投票箱 ID
+    option = "新的選項"
 
-    # 調用 add_vote 函數
-    result = add_vote(user_token, vote_name, *options)
+    # 調用 add_vote_option 函數
+    result = add_vote_option(user_token, vote_id, option)
 
     # 打印結果
     print("測試結果:")
     if "error" in result:
         print(f"測試失敗，錯誤信息: {result['error']}")
     else:
-        print(f"測試成功，投票 ID: {result['vote_id']}")
-        print(f"投票名稱: {vote_name}")
-        print(f"選項: {options}")
+        print(f"測試成功，新增選項: {option}")
+        print(f"返回數據: {result}")    
+    # test_add_vote_option()

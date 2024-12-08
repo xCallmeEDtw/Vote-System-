@@ -91,7 +91,6 @@ class VotePage(Page):
 
     def __init__(self, app):
         super().__init__(app)
-        # 移除 Modal 初始化
 
     def show(self):
         # 確認用戶是否已登入
@@ -119,19 +118,23 @@ class VotePage(Page):
         st.markdown("---")
         st.subheader("Voting Topics")
 
-        # 顯示投票箱 
+        # 使用下拉選單選擇候選投票箱
+        selected_candidate_name = st.selectbox("Select a topic", [candidate['name'] for candidate in candidates])
+
+        # 尋找選中的投票箱
+        selected_candidate = next((c for c in candidates if c['name'] == selected_candidate_name), None)
+
+        if selected_candidate:
+            if st.button("Vote", key=f"enter_{selected_candidate['vote_id']}"):
+                # 設置當前投票箱並跳轉
+                self.app.current_vote_box = selected_candidate['vote_id']
+                self.app.current_vote_name = selected_candidate['name']
+                self.app.set_page("vote_box")
+                st.rerun()
+
+        # 顯示所有投票箱列表
         for candidate in candidates:
             st.markdown(f"- **{candidate['name']}** ({candidate['votes']} votes)")
-
-        selected_candidate = st.selectbox("", [candidate['name'] for candidate in candidates])
-
-        for candidate in candidates:
-            if selected_candidate == candidate['name']:
-                if st.button(f"Vote", key=f"enter_{candidate['vote_id']}"):
-                    self.app.current_vote_box = candidate['vote_id']  # 設置當前投票箱 ID
-                    self.app.current_vote_name = candidate['name']  # 設置當前投票箱名字
-                    self.app.set_page("vote_box")  # 跳轉到投票箱詳細頁
-                    st.rerun()
 
         # 登出按鈕
         st.markdown("---")
@@ -143,30 +146,31 @@ class VotePage(Page):
     def show_add_vote_form(self):
         """新增投票箱表單"""
         st.markdown("---")
-        st.subheader("新增投票箱")
-        
+        st.subheader("Add a New Topic")
+
         # 初始化投票名稱
         if 'new_vote_name' not in st.session_state:
             st.session_state.new_vote_name = ''
 
         # 投票名稱輸入框
-        vote_name = st.text_input("投票名稱", key="new_vote_name")
+        vote_name = st.text_input("Topic Name", key="new_vote_name")
 
         # 初始化選項列表
         if "vote_options" not in st.session_state:
             st.session_state.vote_options = [""]
 
         # 顯示所有選項輸入框
-        st.write("新增選項：")
+        st.write("Add options:")
         options_to_remove = []
         for i, option in enumerate(st.session_state.vote_options):
             cols = st.columns([9, 1])
             with cols[0]:
-                st.session_state.vote_options[i] = st.text_input(f"選項 {i + 1}", value=option, key=f"vote_option_{i}")
+                st.session_state.vote_options[i] = st.text_input(f"Option {i + 1}", value=option, key=f"vote_option_{i}")
             with cols[1]:
                 if len(st.session_state.vote_options) > 1:
                     if st.button("－", key=f"remove_option_{i}"):
                         options_to_remove.append(i)
+
         # 移除選定的選項
         if options_to_remove:
             for idx in sorted(options_to_remove, reverse=True):
@@ -174,33 +178,33 @@ class VotePage(Page):
             st.rerun()
 
         # 按鈕：新增選項輸入框
-        if st.button("新增選項"):
+        if st.button("Add Option"):
             st.session_state.vote_options.append("")
             st.rerun()
 
         # 提交按鈕
-        if st.button("提交"):
+        if st.button("Submit"):
             if vote_name and any(opt.strip() for opt in st.session_state.vote_options):
                 try:
                     # 將非空選項組成列表並調用 add_vote 函數
                     option_list = [opt.strip() for opt in st.session_state.vote_options if opt.strip()]
                     result = doVote.add_vote(self.app.user_id, vote_name, *option_list)
                     if "error" in result:
-                        st.error(f"新增失敗: {result['error']}")
+                        st.error(f"Failed to add topic: {result['error']}")
                     else:
-                        st.success(f"投票箱 '{vote_name}' 已成功新增！")
+                        st.success(f"Topic '{vote_name}' added successfully!")
                         # 重置表單
                         del st.session_state.vote_options  # 重置選項
                         del st.session_state.new_vote_name  # 重置投票名稱
                         st.session_state.show_add_vote_form = False
                         st.rerun()
                 except Exception as e:
-                    st.error(f"發生錯誤: {e}")
+                    st.error(f"Error: {e}")
             else:
-                st.error("請輸入投票名稱和至少一個有效選項")
+                st.error("Please provide a topic name and at least one valid option.")
 
         # 取消按鈕
-        if st.button("取消"):
+        if st.button("Cancel"):
             st.session_state.show_add_vote_form = False
             del st.session_state.vote_options  # 重置選項
             del st.session_state.new_vote_name  # 重置投票名稱
@@ -210,12 +214,12 @@ class VotePage(Page):
 
 
 class VoteBoxPage(Page):
-    """投票箱詳細頁面"""
+    """Vote Box Detail Page"""
 
     def show(self):
         st.title(f"{self.app.current_vote_name}")
 
-        # 確認用戶是否已登入
+        # Ensure the user is logged in
         if self.app.user_id:
             pass
         else:
@@ -223,46 +227,77 @@ class VoteBoxPage(Page):
             self.app.set_page("login")
             st.rerun()
 
-        # 確認當前是否有選擇的投票箱
+        # Ensure a vote box is selected
         if not self.app.current_vote_box:
-            st.error("No voting topic, please return to voting topic selection page.")
+            st.error("No voting topic, please return to the voting topic selection page.")
             self.app.set_page("vote")
             st.rerun()
 
-        # 自動刷新機制
-        refresh_interval = 10  # 設定自動刷新間隔（秒）
-        count = st_autorefresh(interval=refresh_interval * 1000, key="autorefresh_vote_box")
+        # Add Options Button
+        if "show_add_option_form" not in st.session_state:
+            st.session_state.show_add_option_form = False
 
-        # 獲取投票箱選項
+        with st.container():
+            col1, col2 = st.columns([9, 1])
+            with col2:
+                if st.button("Add Options", key="add_options"):
+                    st.session_state.show_add_option_form = True
+
+        if st.session_state.show_add_option_form:
+            st.markdown("### Add New Option")
+            option_name = st.text_input("Option Name", key="new_option_name")
+
+            if st.button("Submit Option"):
+                if option_name.strip():
+                    try:
+                        result = doVote.add_vote_option(self.app.user_id, self.app.current_vote_box, option_name.strip())
+                        if "error" in result:
+                            st.error("Permission denied.")
+                        else:
+                            st.success(f"Option '{option_name}' added successfully!")
+                            st.session_state.show_add_option_form = False
+                            st.rerun()
+                    except Exception as e:
+                        st.error(f"Error while adding option: {e}")
+                else:
+                    st.error("Please provide a valid option name.")
+
+            if st.button("Cancel"):
+                st.session_state.show_add_option_form = False
+                st.rerun()
+
+        # Auto-refresh mechanism
+        refresh_interval = 10  # Refresh interval in seconds
+        st_autorefresh(interval=refresh_interval * 1000, key="autorefresh_vote_box")
+
+        # Fetch vote box options
         try:
             options = doVote.get_vote_options(self.app.current_vote_box)
         except Exception as e:
-            st.error(f"Cannot get vote option: {e}")
+            st.error(f"Cannot get vote options: {e}")
             return
 
-
-        # Placeholder for success message
+        # Placeholder for success and error messages
         success_message = st.empty()
-        
-        # 顯示選項
+        error_message = st.empty()
+
+        # Display options
         for option in options:
             col1, col2 = st.columns([1, 1])
             with col1:
                 if st.button(f"{option['name']}", key=f"vote_{option['name']}"):
                     try:
-                        # 調用 doVote.vote API 進行投票
-                        doVote.vote(self.app.user_id, self.app.current_vote_box, option['name'])
-                        
-                        # Display success message
-                        success_message.success(f"Successfully vote for {option['name']}！")
-                        
-                        # Wait for a few seconds to show the success message
-                        time.sleep(2)
-                        
-                        # Clear the success message after the delay
-                        success_message.empty()
-
-                        st.rerun()  # 手動刷新頁面
+                        # Call doVote.vote API to vote
+                        vote_result = doVote.vote(self.app.user_id, self.app.current_vote_box, option['name'])
+                        if 'error' in vote_result:
+                            error_message.error("You have already voted.")
+                            time.sleep(3)
+                            error_message.empty()
+                        else:
+                            success_message.success(f"Successfully voted for {option['name']}!")
+                            time.sleep(3)
+                            success_message.empty()
+                        st.rerun()
                     except Exception as e:
                         st.error(f"Voting failed: {e}")
             with col2:
@@ -270,10 +305,11 @@ class VoteBoxPage(Page):
 
         st.markdown("---")
 
-        # 返回投票箱列表
+        # Back to vote topic list
         if st.button("Back to Voting Topics"):
             self.app.set_page("vote")
             st.rerun()
+
 
 
 
