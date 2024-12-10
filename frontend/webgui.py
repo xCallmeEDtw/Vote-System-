@@ -4,7 +4,31 @@ import doVote
 import time
 from streamlit_autorefresh import st_autorefresh  # 確保已安裝 streamlit_autorefresh
 from streamlit_modal import Modal  # 確保已安裝 streamlit-modal 套件
-from streamlit_elements import elements
+
+st.markdown(
+    """
+    <style>
+    .stButton button {
+        background-color: #4CAF50; /* Green */
+        border: none;
+        color: white;
+        padding: 10px 20px;
+        text-align: center;
+        text-decoration: none;
+        display: inline-block;
+        font-size: 16px;
+        margin: 4px 2px;
+        cursor: pointer;
+        border-radius: 5px;
+    }
+    .stTitle {
+        color: #4CAF50;
+        font-family: 'Arial Black', sans-serif;
+    }
+    """
+    ,
+    unsafe_allow_html=True
+)
 
 class Page:
     """基礎頁面類，所有頁面繼承此類"""
@@ -27,7 +51,7 @@ class LoginPage(Page):
             st.rerun()
 
         
-        st.title("Enter your identity")
+        st.markdown('<h1 class="stTitle">Enter your identity</h1>', unsafe_allow_html=True)
         st.subheader("Not registered yet?")
         st.text("Click the 'Register an account' button above to register.")
 
@@ -62,7 +86,7 @@ class RegisterPage(Page):
             self.app.set_page("login")
             st.rerun()
 
-        st.title("Create a new identity")
+        st.markdown('<h1 class="stTitle">Create a new identity</h1>', unsafe_allow_html=True)
         st.subheader("Enter your email in the account field.")
 
         # 輸入框
@@ -104,7 +128,7 @@ class VotePage(Page):
         # 獲取投票箱列表
         candidates = doVote.get_candidates()
 
-        st.title("Choose a topic to participate in.")
+        st.markdown('<h1 class="stTitle">Choose a topic to participate in</h1>', unsafe_allow_html=True)
         st.subheader("...or create your own topic.")
 
         # 顯示新增投票箱按鈕
@@ -132,11 +156,15 @@ class VotePage(Page):
                 self.app.set_page("vote_box")
                 st.rerun()
 
+
+        
+        st.markdown("Note: Each participant has 1 vote for 1 topic.")
+
         # 顯示所有投票箱列表
         for candidate in candidates:
             st.markdown(f"- **{candidate['name']}** ({candidate['votes']} votes)")
 
-        # 登出按鈕
+    # 登出按鈕
         st.markdown("---")
         if st.button("Log out", key="logout"):
             self.app.clear_user_id()  # 清除登入 ID
@@ -237,8 +265,9 @@ class VoteBoxPage(Page):
         if "show_add_option_form" not in st.session_state:
             st.session_state.show_add_option_form = False
 
+
         with st.container():
-            col1, col2 = st.columns([9, 1])
+            col1, col2 = st.columns([1, 1])
             with col2:
                 if st.button("Add Options", key="add_options"):
                     st.session_state.show_add_option_form = True
@@ -269,6 +298,7 @@ class VoteBoxPage(Page):
         # Auto-refresh mechanism
         refresh_interval = 10  # Refresh interval in seconds
         st_autorefresh(interval=refresh_interval * 1000, key="autorefresh_vote_box")
+
 
         # Fetch vote box options
         try:
