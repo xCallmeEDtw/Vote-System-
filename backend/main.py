@@ -21,13 +21,14 @@ db = firebase.database()
 app = FastAPI()
 
 @app.post("/createVote")
-def create_vote(name: str, options: list[str]):
+def create_vote(usertoken: str, name: str, options: list[str]):
     try:
         # 自動生成名稱+時間戳作為唯一名稱
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
         unique_name = f"{name}_{timestamp}"
 
         vote_data = {
+            "user": usertoken,
             "name": unique_name,
             "created_at": datetime.now().isoformat(),
             "options": {option: 0 for option in options},
@@ -70,11 +71,12 @@ def all_vote():
         raise HTTPException(status_code=500, detail=f"Failed to retrieve vote: {str(e)}")
 
 
-
+#-OCHXe0bM1M5NLCD0nCv
+#eyJhbGciOiJSUzI1NiIsImtpZCI6IjkyODg2OGRjNDRlYTZhOThjODhiMzkzZDM2NDQ1MTM2NWViYjMwZDgiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL3NlY3VyZXRva2VuLmdvb2dsZS5jb20vb29wLTVmYjczIiwiYXVkIjoib29wLTVmYjczIiwiYXV0aF90aW1lIjoxNzMyMjU2NjIwLCJ1c2VyX2lkIjoiY3RLM1NCcmREUFVNUFdZWk5OSVdFSVk3WDVHMyIsInN1YiI6ImN0SzNTQnJkRFBVTVBXWVpOTklXRUlZN1g1RzMiLCJpYXQiOjE3MzIyNTY2MjAsImV4cCI6MTczMjI2MDIyMCwiZW1haWwiOiIxMjNhc2RAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOmZhbHNlLCJmaXJlYmFzZSI6eyJpZGVudGl0aWVzIjp7ImVtYWlsIjpbIjEyM2FzZEBnbWFpbC5jb20iXX0sInNpZ25faW5fcHJvdmlkZXIiOiJwYXNzd29yZCJ9fQ.EIam2-3rO4oLWTj94kigWD_cFEjjKUvaA4oaSb_a4KBaYDSMflYEdGqyDlXap9OW5JcKUh_pgIDCVCD4cCZFa5eCWgiQt0y4sasO3xPg7MaCqr8BA3yEmjKZQMfk1dBYkS8Odg6gKwpOSS4M-CstgCODHlgwvaJcCSlVkrCtVNlPhOhrnvKDtX3yrHut0xsXjfPvoO5u9mN3W3hd7_uZXxZ9pnRbNkObtZMC8JgdpT5DsEMGSyLE8CkC4QFJy0sZub-cI2xt_HrDEygXvjmN5y5cvNtJa-6sjT5SlD67SMDBPv-42CzdEAwd31akbA3Edb6PATAh4gWjzPSzD_uM4A
 @app.post("/addVoteOption")
-def add_vote_option(vote_id: str, option: str):
+def add_vote_option(user_token: str, vote_id: str, option: str):
     try:
-        # 取得投票的資料參考
+        # 從 Firebase 取得投票資料參考
         vote_ref = db.child("votes").child(vote_id)
         vote_data = vote_ref.get().val()
 
@@ -82,28 +84,79 @@ def add_vote_option(vote_id: str, option: str):
         if not vote_data:
             raise HTTPException(status_code=404, detail="Vote not found")
 
+        # 確認使用者是否有權限
+        if vote_data.get("user") != user_token:
+            raise HTTPException(status_code=403, detail="User does not have permission to modify this vote")
+
         # 確認選項是否已經存在
-        if option in vote_data["options"]:
+        if option in db.child("votes").child(vote_id).get("options", {}):
             raise HTTPException(status_code=400, detail="Option already exists")
+        # 在 Firebase votes 層更新 options 節點
+        try:
+            db.child("votes").child(vote_id).child("options").update({option: 0})
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to update options in Firebase: {str(e)}")
 
-        # 新增選項到 options
-        vote_data["options"][option] = 0
-
-        # 更新資料庫中的 options
-        vote_ref.child("options").set(vote_data["options"])  # 使用 `set()` 確保直接覆蓋
-
-        # 驗證資料庫是否成功更新
-        updated_vote_data = vote_ref.get().val()
-        if not updated_vote_data or option not in updated_vote_data["options"]:
-            raise HTTPException(status_code=500, detail="Failed to add option in database")
+        # 確認是否成功更新
 
         return {
             "message": "Option added successfully",
             "vote_id": vote_id,
-            "updated_options": updated_vote_data["options"]
         }
+    except HTTPException as http_err:
+        raise http_err
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to add vote option: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
+
+
+@app.post("/vote")
+def vote(user_token: str, vote_id: str, option: str):
+    try:
+        # 從 Firebase 取得投票資料參考
+        vote_ref = db.child("votes").child(vote_id)
+        vote_data = vote_ref.get().val()
+
+        # 確認投票是否存在
+        if not vote_data:
+            raise HTTPException(status_code=404, detail="Vote not found")
+
+        # 確認選項是否有效
+        if option not in vote_data.get("options", {}):
+            raise HTTPException(status_code=400, detail="Invalid voting option")
+
+        # 檢查用戶是否已經投票
+        voter_hashes = vote_data.get("voter_hashes", [])
+        if user_token in voter_hashes:
+            raise HTTPException(status_code=403, detail="User has already voted")
+
+        # 更新選項的票數
+        current_votes = vote_data["options"].get(option, 0)
+        new_votes = current_votes + 1
+
+        # 新增用戶到 voter_hashes
+        voter_hashes.append(user_token)
+        print(current_votes)
+        print(voter_hashes)
+        # 更新 Firebase 資料庫
+        try:
+            db.child("votes").child(vote_id).update({
+                f"options/{option}": new_votes,
+                "voter_hashes": voter_hashes,
+                "total_votes": vote_data.get("total_votes", 0) + 1
+            })
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to update Firebase: {str(e)}")
+
+        return {
+            "message": "Vote successfully submitted",
+            "vote_id": vote_id,
+            "option": option,
+            "new_votes": new_votes
+        }
+    except HTTPException as http_err:
+        raise http_err
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
 
 @app.post("/addUser")
 def add_user(email: str, password: str):
@@ -113,10 +166,14 @@ def add_user(email: str, password: str):
     except Exception as e:
         error = str(e)
         print(error)
+        if "6 characters" in error:
+            raise HTTPException(status_code=400, detail="Password should be at least 6 characters")
+        if "INVALID_EMAIL" in error:
+            raise HTTPException(status_code=400, detail="Invaild Email")
         raise HTTPException(status_code=400, detail="User Exist")
 
 @app.post("/login")
-def add_user(email: str, password: str):
+def login(email: str, password: str):
     try:
         user = auth.sign_in_with_email_and_password(email, password)
         return user['idToken']

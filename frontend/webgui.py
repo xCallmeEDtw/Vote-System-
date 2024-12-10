@@ -156,8 +156,10 @@ class VotePage(Page):
                 self.app.set_page("vote_box")
                 st.rerun()
 
+
         
         st.markdown("Note: Each participant has 1 vote for 1 topic.")
+
         # 顯示所有投票箱列表
         for candidate in candidates:
             st.markdown(f"- **{candidate['name']}** ({candidate['votes']} votes)")
@@ -263,6 +265,7 @@ class VoteBoxPage(Page):
         if "show_add_option_form" not in st.session_state:
             st.session_state.show_add_option_form = False
 
+
         with st.container():
             col1, col2 = st.columns([1, 1])
             with col2:
@@ -295,6 +298,7 @@ class VoteBoxPage(Page):
         # Auto-refresh mechanism
         refresh_interval = 10  # Refresh interval in seconds
         st_autorefresh(interval=refresh_interval * 1000, key="autorefresh_vote_box")
+
 
         # Fetch vote box options
         try:
