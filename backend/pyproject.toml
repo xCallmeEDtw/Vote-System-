@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "oop"
+version = "0.1.0"
+description = ""
+authors = ["ShallowFeather <74778927+ShallowFeather@users.noreply.github.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "3.12.7"
+uvicorn = "^0.32.1"
+pyrebase4 = "^4.8.0"
+fastapi = "^0.115.5"
+
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
