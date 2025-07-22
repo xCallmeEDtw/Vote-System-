@@ -75,9 +75,7 @@ UML
 
 
 
-
-
-
+## Contribution
 - B123040054 楊詠旭 | Backend programming, project report writing, presentation.
 - B112040003 張景旭 | Frontend programming, project report writing, presentation.
 - B113040009 羅妤暄 | Beautification of website, project report writing, presentation.
